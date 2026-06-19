@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CyberPredict Pro - Aviator & CosmosX Multi-Predictor</title>
+  <!-- Tailwind CSS Play CDN -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.0/dist/index.global.js"
+    integrity="sha384-nWTzRTCY/9V4Bo352ehygr1c4cnst4XN6lMR3fipakEQrhVpc0hEM5Dii3Amz0sT"
+    crossorigin="anonymous"
+  ></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for real-time statistical curves -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style type="text/tailwindcss">
+    @custom-variant dark (&:where(.dark, .dark *));
+
+    /* Dual Theme Customization */
+    .theme-cosmos {
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      --primary-border: rgba(99, 102, 241, 0.5);
+      --accent-color: #06b6d4; /* Cyan */
+      --brand-color: #6366f1; /* Indigo */
+      --bg-gradient: radial-gradient(at 0% 0%, #030712 0%, #0b1528 50%, #020617 100%);
+    }
+
+    .theme-aviator {
+      --primary-glow: rgba(239, 68, 68, 0.25);
+      --primary-border: rgba(239, 68, 68, 0.5);
+      --accent-color: #f97316; /* Orange */
+      --brand-color: #ef4444; /* Military Red */
+      --bg-gradient: radial-gradient(at 0% 0%, #050505 0%, #1a0808 50%, #0a0101 100%);
+    }
+
+    .glow-panel {
+      box-shadow: 0 0 20px var(--primary-glow);
+      border: 1px solid var(--primary-border);
+    }
+
+    /* Cyber grid overlay */
+    .cyber-grid {
+      background-size: 35px 35px;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.008) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.008) 1px, transparent 1px);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #030712;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--brand-color);
+    }
+  </style>
+  <script>
+    document.documentElement.classList.add('dark');
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-cosmos bg-gray-950 text-gray-100 antialiased font-sans transition-all duration-700 min-h-dvh cyber-grid relative">
+
+  <!-- Floating animated canvas backdrops -->
+  <canvas id="live-particles-bg" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+  <div id="app" class="relative z-10 flex flex-col min-h-screen">
+    
+    <!-- MAIN SITE HEADER -->
+    <header class="border-b border-gray-900 bg-black/60 backdrop-blur-md sticky top-0 z-50 transition-colors duration-500">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <!-- Logo and Platform info -->
+        <div class="flex items-center space-x-3">
+          <div id="header-brand-icon" class="p-2.5 bg-indigo-600/20 text-indigo-400 rounded-xl transition-all duration-500">
+            <i id="brand-icon" data-lucide="rocket" class="h-5 w-5 transform -rotate-45"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span id="txt-brand-name" class="text-lg font-black tracking-widest bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent uppercase">CosmosX Predictor</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800 font-mono tracking-widest uppercase">Stealth V4.0</span>
+            </div>
+            <p class="text-[10px] text-gray-400 font-mono">Intercepteur de Flux WebSocket &middot; bet261.mg</p>
+          </div>
+        </div>
+
+        <!-- DUAL-GAME THEME TOGGLE SWITCH -->
+        <div class="flex items-center bg-gray-900/90 p-1 rounded-xl border border-gray-800">
+          <!-- CosmosX Button -->
+          <button id="btn-mode-cosmos" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 bg-indigo-600 text-white shadow-lg cursor-pointer">
+            <i data-lucide="rocket" class="h-3.5 w-3.5"></i>
+            <span>COSMOSX</span>
+          </button>
+          <!-- Aviator Button -->
+          <button id="btn-mode-aviator" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 text-gray-400 hover:text-white cursor-pointer">
+            <i data-lucide="plane" class="h-3.5 w-3.5"></i>
+            <span>AVIATOR</span>
+          </button>
+        </div>
+
+        <!-- System Controls -->
+        <div class="flex items-center space-x-3">
+          <button id="btn-sound-toggle" class="p-2 bg-gray-900 hover:bg-gray-850 text-gray-400 hover:text-white border border-gray-800 rounded-lg transition">
+            <i id="icon-sound" data-lucide="volume-2" class="h-4 w-4"></i>
+          </button>
+          <a href="#scraping-guide" class="hidden md:flex items-center space-x-1 px-3 py-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/15 rounded-lg transition">
+            <i data-lucide="shield-alert" class="h-3.5 w-3.5"></i>
+            <span>Bypass Anti-Bot Info</span>
+          </a>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- LIVE SUB-HERO INFORMATION BANNER -->
+    <div id="sub-banner" class="bg-indigo-950/20 border-b border-indigo-900/10 text-xs py-2 px-4 transition-colors duration-500">
+      <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center space-x-2">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-gray-400 font-mono">Cible active : <strong class="text-gray-200" id="target-web-link">https://bet261.mg/instant-games/llc/Aviator</strong></span>
+        </div>
+        <div class="flex items-center space-x-4 text-[11px] font-mono text-gray-500">
+          <span>Cookies CF : <span class="text-emerald-400 font-bold">Injecté</span></span>
+          <span>Bypass TLS-JA3 : <span class="text-emerald-400 font-bold">Actif (Chrome v124)</span></span>
+          <span>WebSocket : <span class="text-emerald-400 font-bold" id="txt-websocket-status">ÉCOUTE EN DIRECT (SIMULÉ)</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN BODY SECTION -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6">
+
+      <!-- TOP METRIC STATUS STRIP -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Metric 1 -->
+        <div class="bg-gray-950/80 backdrop-blur-md border border-gray-900 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-[10px] text-gray-500 uppercase tracking-wider font-mono">Paquets WebSocket Reçus</p>
+            <p id="counter-packets" class="text-xl font-bold mt-1 font-mono text-white">41,284</p>
+          </div>
+          <div id="icon-container-m1" class="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 transition-colors duration-500">
+            <i data-lucide="network" class="h-4 w-4"></i>
+          </div>
+        </div>
+        <!-- Metric 2 -->
+        <div class="bg-gray-950/80 backdrop-blur-md border border-gray-900 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-[10px] text-gray-500 uppercase tracking-wider font-mono">Proxy Rotations / Min</p>
+            <p class="text-xl font-bold mt-1 font-mono text-emerald-400">12 / min</p>
+          </div>
+          <div id="icon-container-m2" class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors duration-500">
+            <i data-lucide="shuffle" class="h-4 w-4"></i>
+          </div>
+        </div>
+        <!-- Metric 3 -->
+        <div class="bg-gray-950/80 backdrop-blur-md border border-gray-900 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-[10px] text-gray-500 uppercase tracking-wider font-mono">Précision Moyenne Détectée</p>
+            <p class="text-xl font-bold mt-1 font-mono text-cyan-400">92.4%</p>
+          </div>
+          <div id="icon-container-m3" class="p-2 bg-cyan-500/10 rounded-lg text-cyan-400 transition-colors duration-500">
+            <i data-lucide="compass" class="h-4 w-4"></i>
+          </div>
+        </div>
+        <!-- Metric 4 -->
+        <div class="bg-gray-950/80 backdrop-blur-md border border-gray-900 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-[10px] text-gray-500 uppercase tracking-wider font-mono">Fréquence des pics &ge; 5x</p>
+            <p class="text-xl font-bold mt-1 font-mono text-yellow-400" id="txt-peak-rate">12m 45s</p>
+          </div>
+          <div id="icon-container-m4" class="p-2 bg-yellow-500/10 rounded-lg text-yellow-400 transition-colors duration-500">
+            <i data-lucide="gauge" class="h-4 w-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LEFT CONTROL BOARD: PREDICTION FORM & WEBSOCKET DECODER (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col space-y-6">
+          
+          <!-- CONTROL CONSOLE -->
+          <div id="prediction-panel" class="bg-gray-950/90 backdrop-blur-md border border-indigo-900/30 rounded-2xl p-5 glow-panel transition-all duration-500">
+            <div class="flex items-center justify-between border-b border-gray-900 pb-3 mb-4">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="terminal" class="h-4.5 w-4.5 text-indigo-400" id="terminal-icon"></i>
+                <h2 id="txt-console-title" class="font-black text-sm uppercase tracking-wider text-white">Console prédiction CosmosX</h2>
+              </div>
+              <span id="txt-console-algo" class="text-[9px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-mono py-0.5 px-2 rounded uppercase tracking-widest">SEED AUTO-CALIBRÉ</span>
+            </div>
+
+            <!-- THE PREDICTION FORM -->
+            <form id="radar-prediction-form" class="space-y-4">
+              
+              <!-- Saisie 1: Multiplicateur récent -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5 flex justify-between">
+                  <span>Multiplicateur de Référence (≥ 2.00x)</span>
+                  <span class="text-[9.5px] text-gray-500 italic normal-case">Dernière valeur clé</span>
+                </label>
+                <div class="relative rounded-lg shadow-sm">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-indigo-400 font-bold font-mono" id="form-prefix-char">X</span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="2.00"
+                    id="mult-input"
+                    required
+                    value="2.85"
+                    class="block w-full pl-8 pr-12 py-3 bg-gray-900/70 border border-gray-800 rounded-lg text-white font-mono placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition sm:text-sm"
+                    placeholder="Ex: 2.50"
+                  >
+                </div>
+                <div class="mt-1 flex justify-between text-[11px] text-gray-500">
+                  <span>Intervalle : 2.00x - 1000x</span>
+                  <span class="text-indigo-300 cursor-pointer hover:underline flex items-center" id="btn-quick-fill">
+                    <i data-lucide="zap" class="h-3 w-3 mr-0.5"></i> Générer
+                  </span>
+                </div>
+              </div>
+
+              <!-- Saisie 2: Exact Clock (HH:MM:SS) -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5 flex justify-between">
+                  <span>Heure exacte du crash (HH:MM:SS)</span>
+                  <span class="text-[9.5px] text-gray-500 italic normal-case">Heure locale bet261</span>
+                </label>
+                
+                <div class="grid grid-cols-3 gap-2">
+                  <select id="sel-hour" class="block w-full py-2.5 px-3 bg-gray-900/70 border border-gray-800 rounded-lg text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"></select>
+                  <select id="sel-minute" class="block w-full py-2.5 px-3 bg-gray-900/70 border border-gray-800 rounded-lg text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"></select>
+                  <select id="sel-second" class="block w-full py-2.5 px-3 bg-gray-900/70 border border-gray-800 rounded-lg text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"></select>
+                </div>
+
+                <div class="mt-2 flex justify-between text-[11px] text-gray-500">
+                  <span class="text-gray-400">Précision requise : 5.00x+</span>
+                  <button type="button" id="btn-sync-time" class="text-indigo-300 hover:text-white flex items-center space-x-0.5 transition hover:underline">
+                    <i data-lucide="clock" class="h-3 w-3 mr-0.5"></i>
+                    <span>Synchroniser l'heure locale</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- ACTION SUBMIT -->
+              <button
+                type="submit"
+                id="btn-calculate"
+                class="w-full mt-4 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 transform active:scale-95 flex items-center justify-center space-x-2 cursor-pointer border border-indigo-400/20"
+              >
+                <i data-lucide="radar" class="h-4.5 w-4.5 animate-spin"></i>
+                <span class="uppercase tracking-widest text-xs">Lancer la Prédiction</span>
+              </button>
+
+            </form>
+          </div>
+
+          <!-- LIVE WEBSOCKET DECODER INTERCEPTOR PANEL -->
+          <div class="bg-gray-950/80 backdrop-blur-md border border-gray-900 rounded-2xl p-5 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-900 pb-2">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="binary" class="h-4.5 w-4.5 text-emerald-400"></i>
+                <h3 class="font-bold text-xs uppercase tracking-wider text-white">Écouteur de Flux WebSocket (Intercepteur)</h3>
+              </div>
+              <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+
+            <!-- Terminal output representation -->
+            <div id="ws-terminal" class="bg-black/90 rounded-lg p-3 h-[180px] overflow-y-auto font-mono text-[10px] text-emerald-400 space-y-1 scrollbar-thin border border-gray-900">
+              <!-- Animated terminal frames inserted here -->
+            </div>
+
+            <!-- Professional bypass settings simulation -->
+            <div class="grid grid-cols-3 gap-2 text-[9.5px] font-mono text-gray-400">
+              <div class="bg-gray-900/40 p-2 rounded border border-gray-850 flex flex-col justify-between">
+                <span>TLS FINGERPRINT</span>
+                <span class="text-emerald-400 font-bold mt-1">JA3 ACTIVE</span>
+              </div>
+              <div class="bg-gray-900/40 p-2 rounded border border-gray-850 flex flex-col justify-between">
+                <span>PROXY ROTATION</span>
+                <span class="text-emerald-400 font-bold mt-1">RESIDENTIAL</span>
+              </div>
+              <div class="bg-gray-900/40 p-2 rounded border border-gray-850 flex flex-col justify-between">
+                <span>CF BYPASS</span>
+                <span class="text-emerald-400 font-bold mt-1">STEALTH v4</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT PANEL: INTERACTIVE HUD & DYNAMIC SIMULATOR (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col space-y-6">
+          
+          <!-- SIMULATOR AND ROCKET/PLANE FLYING WINDOW -->
+          <div class="bg-gray-950/90 backdrop-blur-md border border-gray-900 rounded-2xl overflow-hidden flex flex-col h-[380px] relative">
+            
+            <!-- Simulator Controls Header -->
+            <div class="bg-gray-900/30 border-b border-gray-900 px-4 py-2.5 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="flex h-2 w-2 relative">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" id="live-dot-color"></span>
+                </span>
+                <span id="txt-simulator-header" class="text-[10px] font-bold font-mono tracking-widest text-cyan-400 uppercase">CosmosX Flight Deck</span>
+              </div>
+              <div class="flex items-center space-x-1.5 text-[10px] text-gray-500 font-mono">
+                <i data-lucide="cpu" class="h-3 w-3"></i>
+                <span id="txt-gpu-status">GPU RENDERING ACTIVE</span>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="flex-grow relative bg-black/95 overflow-hidden" id="flight-canvas-container">
+              <!-- Radial Darkness overlay for deep focus -->
+              <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#000_100%)] z-10 pointer-events-none"></div>
+
+              <!-- Live Drawing flight line/scenery -->
+              <canvas id="active-flight-canvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+              <!-- Live Floating Telemetry Info -->
+              <div class="absolute top-4 left-4 z-20 pointer-events-none bg-black/70 backdrop-blur-sm border border-gray-900 p-2.5 rounded-lg font-mono text-[10px] text-gray-400 space-y-0.5">
+                <div>LIVE ALTITUDE: <span id="telemetry-mult" class="text-yellow-400 font-bold">1.00x</span></div>
+                <div>SERVER SEED: <span id="telemetry-seed" class="text-gray-500">e27cf3910ab...</span></div>
+                <div>CLIENT HOOK: <span id="telemetry-hook" class="text-emerald-400">OK</span></div>
+              </div>
+
+              <!-- Large Centered Multiplier -->
+              <div class="absolute inset-x-0 top-1/4 flex flex-col items-center justify-center z-20 pointer-events-none text-center select-none">
+                <span id="large-mult-display" class="text-6xl sm:text-7xl font-black tracking-tighter text-white font-mono drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">1.00x</span>
+                <span id="flight-status-indicator" class="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mt-2 font-mono">EN ATTENTE DE SYNCHRONISATION</span>
+              </div>
+
+              <!-- Banner Notification Overlay -->
+              <div id="flight-banner" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 bg-black/90 backdrop-blur-md border border-gray-800 px-6 py-4 rounded-xl text-center shadow-2xl min-w-[250px]">
+                <p id="flight-banner-title" class="text-sm font-black uppercase tracking-widest text-emerald-400">RETRAIT ACCOMPLI</p>
+                <p id="flight-banner-multiplier" class="text-3xl font-black font-mono text-white mt-1">2.45x</p>
+                <p id="flight-banner-desc" class="text-[10px] text-gray-500 mt-2 font-mono">Fenêtre validée par l'algorithme.</p>
+              </div>
+
+            </div>
+
+            <!-- Flight Footer telemetry -->
+            <div class="bg-gray-900/30 border-t border-gray-900 px-4 py-2 flex items-center justify-between text-[10px] text-gray-500 font-mono">
+              <span id="txt-flight-engine-status">SYSTEM ENGINE: READY</span>
+              <span id="txt-flight-coords">SECTOR: MC-261</span>
+            </div>
+
+          </div>
+
+          <!-- PREDICTOR CALCULATED REPORT (HIDDEN OR ACTIVE) -->
+          <div id="report-output-panel" class="bg-gray-950/90 backdrop-blur-md border border-gray-900 rounded-2xl p-5 relative overflow-hidden transition-all duration-300">
+            <!-- Simulated Loader -->
+            <div id="report-loader" class="hidden absolute inset-0 bg-gray-950/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center space-y-4">
+              <div class="relative">
+                <div class="w-12 h-12 border-3 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" id="spin-border-color"></div>
+                <i id="loader-inner-icon" data-lucide="rocket" class="h-5 w-5 text-indigo-400 absolute top-3.5 left-3.5 animate-pulse"></i>
+              </div>
+              <div class="text-center">
+                <p class="text-xs font-bold tracking-widest uppercase text-indigo-400" id="loader-main-txt">ALGORITHME CRASH EN ACTION...</p>
+                <p class="text-[10px] text-gray-500 font-mono mt-1" id="loader-sub-txt">Bypass anti-bot Cloudflare...</p>
+              </div>
+            </div>
+
+            <!-- Initial Placeholder -->
+            <div id="report-placeholder" class="text-center py-8">
+              <div class="mx-auto w-10 h-10 bg-gray-900 border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 mb-2">
+                <i data-lucide="cpu" class="h-5 w-5"></i>
+              </div>
+              <p class="text-xs font-bold text-gray-400">Données de Décryptage Prêtes</p>
+              <p class="text-[11px] text-gray-500 max-w-xs mx-auto mt-1">Saisissez l'heure exacte et le multiplicateur de crash pour générer une simulation de courbe prédictive de pointe.</p>
+            </div>
+
+            <!-- Realized Output -->
+            <div id="report-active" class="hidden space-y-4">
+              <div class="flex items-center justify-between border-b border-gray-900 pb-2">
+                <span class="text-emerald-400 font-mono font-bold text-[10px] uppercase flex items-center">
+                  <i data-lucide="check" class="h-3.5 w-3.5 mr-1"></i> MODÈLE PRÉDICTIF RECALIBRÉ AVEC SUCCÈS
+                </span>
+                <span id="report-generation-time" class="text-[9px] font-mono text-gray-500">14:02:12</span>
+              </div>
+
+              <!-- Grid stats outputs -->
+              <div class="grid grid-cols-2 gap-3">
+                <!-- Safe point -->
+                <div class="p-3 bg-gray-900/40 rounded-xl border border-gray-850">
+                  <p class="text-[9px] text-gray-500 uppercase tracking-wider font-mono">CASH-OUT SÉCURISÉ RECOMMANDÉ</p>
+                  <p id="res-safe-mult" class="text-2xl font-black mt-1 text-emerald-400 font-mono">2.12x</p>
+                  <span class="text-[9px] text-emerald-500/80 mt-1 flex items-center">
+                    <i data-lucide="shield" class="h-3 w-3 mr-0.5"></i> Fiabilité maximale (~93%)
+                  </span>
+                </div>
+                <!-- Risk point -->
+                <div class="p-3 bg-gray-900/40 rounded-xl border border-gray-850">
+                  <p class="text-[9px] text-gray-500 uppercase tracking-wider font-mono">CIBLE DE PIC ESTIMÉ (RISQUE 5x+)</p>
+                  <p id="res-peak-mult" class="text-2xl font-black mt-1 text-cyan-400 font-mono">6.42x</p>
+                  <span class="text-[9px] text-cyan-500/80 mt-1 flex items-center">
+                    <i data-lucide="zap" class="h-3 w-3 mr-0.5"></i> Probabilité de vol de pointe
+                  </span>
+                </div>
+              </div>
+
+              <!-- Time Windows -->
+              <div class="p-3.5 bg-gray-900/40 border border-gray-850 rounded-xl space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-gray-400 font-medium font-mono uppercase tracking-wider flex items-center">
+                    <i data-lucide="calendar" class="h-3.5 w-3.5 mr-1 text-indigo-400"></i> INTERVALLE DE SÉCURITÉ DU CRASH
+                  </span>
+                  <span id="res-countdown" class="text-yellow-400 font-mono font-bold">DANS ~05:10 min</span>
+                </div>
+
+                <div class="flex items-center justify-between bg-black/60 p-2.5 rounded-lg border border-gray-900">
+                  <div class="text-center flex-1">
+                    <p class="text-[9px] text-gray-500 uppercase tracking-wider">OUVERTURE FENÊTRE</p>
+                    <p id="res-time-start" class="text-base font-bold text-white font-mono">14:40:15</p>
+                  </div>
+                  <div class="px-2 text-indigo-500" id="res-arrow-indicator">
+                    <i data-lucide="arrow-right" class="h-4 w-4"></i>
+                  </div>
+                  <div class="text-center flex-1">
+                    <p class="text-[9px] text-gray-500 uppercase tracking-wider">FERMETURE FENÊTRE</p>
+                    <p id="res-time-end" class="text-base font-bold text-cyan-400 font-mono">14:41:45</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Confidence -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-mono">
+                  <span class="text-gray-500">INDICE DE FIABILITÉ CYCLIQUEMENT INTÉGRÉ</span>
+                  <span id="res-confidence" class="text-emerald-400 font-bold">88.2%</span>
+                </div>
+                <div class="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-850">
+                  <div id="res-confidence-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full transition-all duration-1000" style="width: 88.2%"></div>
+                </div>
+              </div>
+
+              <div class="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[11px] text-indigo-300 flex items-start space-x-2">
+                <i data-lucide="info" class="h-4 w-4 text-indigo-400 flex-shrink-0 mt-0.5"></i>
+                <p>
+                  L'intercepteur de paquets simule une probabilité basée sur les paquets WebSocket décodés. En programmation réelle, l'écouteur récupère l'empreinte TLS pour contourner Cloudflare de bet261 et met à jour instantanément les cycles pour une précision optimale.
+                </p>
+              </div>
+
+              <button id="btn-save-log" class="w-full py-2 bg-gray-900 border border-gray-850 text-xs font-medium text-gray-300 hover:text-white rounded-lg hover:bg-gray-800 transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                <i data-lucide="bookmark-plus" class="h-3.5 w-3.5"></i>
+                <span>Enregistrer ce test d'interception</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- BOTTOM SECTION: SCRAPING GUIDE & TECHNICAL DOCUMENTATION -->
+      <section id="scraping-guide" class="bg-gray-950/50 border border-gray-900 rounded-2xl p-6 sm:p-8 space-y-6">
+        
+        <!-- Section title -->
+        <div class="text-center max-w-3xl mx-auto space-y-2">
+          <h2 class="text-lg sm:text-xl font-black uppercase tracking-widest bg-gradient-to-r from-red-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent">
+            GUIDE TECHNIQUE DE SCRAPING DE FLUX WEBSOCKET (ANTI-BOT BYPASS)
+          </h2>
+          <p class="text-xs text-gray-400 leading-relaxed font-mono">
+            Comment les experts extraient les paquets de bet261.mg pour alimenter un modèle de prédiction en temps réel.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Technique 1 -->
+          <div class="bg-gray-950/80 p-5 rounded-xl border border-gray-900 space-y-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xs font-mono font-bold">01</div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-white">Écoute Réseau WebSocket (WSS)</h3>
+            </div>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Contrairement au scraping de pages Web statiques, les données en direct d'Aviator ou CosmosX circulent sur un canal permanent crypté : le **WebSocket**.
+              <br><br>
+              <strong class="text-gray-300 font-mono">Comment faire manuellement :</strong>
+              <ol class="list-decimal list-inside text-[11px] text-gray-500 mt-1 space-y-1">
+                <li>Ouvrez la page Aviator sur bet261.mg dans Google Chrome.</li>
+                <li>Faites un clic droit et sélectionnez <strong>Inspecter</strong>, puis allez dans l'onglet <strong>Network (Réseau)</strong>.</li>
+                <li>Filtrez les requêtes en sélectionnant l'onglet <strong>WS</strong> (WebSockets).</li>
+                <li>Sélectionnez la connexion de flux actif et cliquez sur l'onglet <strong>Messages</strong> pour voir le flux de données de crash en JSON.</li>
+              </ol>
+            </p>
+          </div>
+
+          <!-- Technique 2 -->
+          <div class="bg-gray-950/80 p-5 rounded-xl border border-gray-900 space-y-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xs font-mono font-bold">02</div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-white">Bypass Anti-Bot de Cloudflare</h3>
+            </div>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Cloudflare analyse la négociation TLS du navigateur. Si un scraper classique (comme Python standard) tente d'ouvrir la connexion, l'IP est bloquée d'office.
+              <br><br>
+              <strong class="text-gray-300 font-mono">Bypass technique professionnel :</strong>
+              <br>
+              Les développeurs chevronnés utilisent une bibliothèque comme <code class="text-emerald-400 font-mono text-[11px]">curl_cffi</code> ou des drivers comme <code class="text-emerald-400 font-mono text-[11px]">Playwright Stealth</code>. Ces frameworks négocient le protocole SSL/TLS en copiant exactement l'empreinte de signature (JA3) de Google Chrome, empêchant Cloudflare d'identifier le bot.
+            </p>
+          </div>
+
+          <!-- Technique 3 -->
+          <div class="bg-gray-950/80 p-5 rounded-xl border border-gray-900 space-y-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 text-xs font-mono font-bold">03</div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-white">Analyse de Graine Cryptographique</h3>
+            </div>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Les jeux d'Aviator ou CosmosX reposent sur la technologie **Provably Fair** (honnêteté prouvée). Chaque crash est le produit d'un hachage SHA-256 combinant le Server Seed, le Client Seed et le Nonce.
+              <br><br>
+              Bien que vous ne puissiez pas prédire le hachage cryptographique SHA-256 à l'avance (car il est mathématiquement infalsifiable), le scraping de paquets WebSocket permet d'accumuler les résultats pour faire de l'**analyse de série temporelle** en continu et calculer des fenêtres d'espérance de gain favorable.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- EDUCATIONAL FOOTNOTE & LIMITS -->
+        <div class="border-t border-gray-900 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-gray-400 leading-relaxed">
+          <div class="space-y-2">
+            <h4 class="font-bold text-white uppercase tracking-wider flex items-center">
+              <i data-lucide="help-circle" class="h-4 w-4 text-indigo-400 mr-2"></i>
+              La Technique du "Double Pari" (Aviator & CosmosX)
+            </h4>
+            <p>
+              Pour tirer profit des données analysées par l'intercepteur WebSocket, utilisez la configuration de panneau double d'Aviator. Déterminez un <strong>retrait automatique bas à 1.80x ou 2.00x</strong> sur le premier panneau pour couvrir et sécuriser 100% de votre capital de départ de la session de jeu, et gardez la seconde mise pour viser des coefficients de pics calculés (ex: 5.00x) sur la base de la série de temps.
+            </p>
+          </div>
+          <div class="bg-red-950/10 border border-red-950/35 rounded-xl p-4 space-y-1.5">
+            <h4 class="font-bold text-red-400 uppercase tracking-wider flex items-center">
+              <i data-lucide="alert-triangle" class="h-4.5 w-4.5 mr-2"></i>
+              Avertissement Légal & Mathématique
+            </h4>
+            <p>
+              Ce simulateur démontre les technologies avancées de capture de données et d'analyse statistique. Il s'agit d'un outil d'expérimentation pédagogique. Aucun modèle mathématique ne peut éliminer le risque inhérent aux jeux de hasard, car la graine de serveur cryptographique SHA-256 reste l'élément de décision final pour chaque crash. Jouez de manière responsable.
+            </p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- HISTORICAL LOGS TABLE -->
+      <section class="bg-gray-950/40 border border-gray-900 rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-900 pb-3">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="history" class="h-4.5 w-4.5 text-indigo-400" id="history-header-icon"></i>
+            <h3 class="font-bold text-xs uppercase tracking-wider text-white">Journal Historique d'Interception WebSocket</h3>
+          </div>
+          <button id="btn-clear-logs" class="text-[10px] text-gray-500 hover:text-red-400 transition flex items-center space-x-1 cursor-pointer">
+            <i data-lucide="trash-2" class="h-3 w-3"></i>
+            <span>Vider l'historique</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto table-wrapper">
+          <table class="w-full text-left text-xs text-gray-400 font-mono">
+            <thead>
+              <tr class="border-b border-gray-850 text-gray-500 uppercase tracking-widest text-[9px]">
+                <th class="py-2 px-1">ID</th>
+                <th class="py-2 px-1">Jeu</th>
+                <th class="py-2 px-1">Graine Initiale</th>
+                <th class="py-2 px-1">Heure Enregistrée</th>
+                <th class="py-2 px-1">Fenêtre Projetée</th>
+                <th class="py-2 px-1">Multiplicateur Pic</th>
+                <th class="py-2 px-1 text-right">Analyse Flux</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body">
+              <tr id="row-empty" class="border-b border-gray-900/40">
+                <td colspan="7" class="py-8 text-center text-gray-500 italic">Aucune donnée capturée pour le moment. Lancez une prédiction ci-dessus pour simuler l'enregistrement de paquets.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- MAIN SITE FOOTER -->
+    <footer class="bg-black/80 border-t border-gray-900 text-[11px] text-gray-500 py-6 transition-colors duration-500">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
+        <div>
+          <p class="font-bold text-gray-400 font-mono">CYBERPREDICT PRO &copy; 2026</p>
+          <p class="mt-1">Modèle de simulation d'analyse réseau WebSocket développé sous protocole d'interception furtif.</p>
+        </div>
+        <div class="flex space-x-4">
+          <span class="hover:text-white cursor-pointer">TLS/JA3 Signatures</span>
+          <span>&middot;</span>
+          <span class="hover:text-white cursor-pointer">WSS Interception API</span>
+          <span>&middot;</span>
+          <span class="hover:text-white cursor-pointer">Assistance Pédagogique</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Audio sounds for arcade elements -->
+  <audio id="snd-success" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-84.wav" preload="auto"></audio>
+  <audio id="snd-fail" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+  <audio id="snd-tick" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+  <audio id="snd-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+
+</body>
+</html>
